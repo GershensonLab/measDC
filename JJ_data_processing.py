@@ -230,7 +230,7 @@ def extract_Isw_R0 (Is,Vs):
             return Isw, R0
 
         try:
-            Isw = (np.max(Is) - np.min(Is) ) /2
+            Isw = np.max(Is)  
         except ValueError:
             Isw = np.nan
         
