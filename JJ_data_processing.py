@@ -7,7 +7,7 @@ Created on Mon Sep 10 10:28:59 2018
 
 import numpy as np
 import os
-from tvregdiff import *
+
 from JJformulas import *
 
 
@@ -228,8 +228,11 @@ def extract_Isw_R0 (Is,Vs):
         if len( Is )== 0 or len( Vs )== 0 :
             Isw, R0 = np.nan, np.nan
             return Isw, R0
-        
-        Isw = (np.max(Is) - np.min(Is) ) /2
+
+        try:
+            Isw = (np.max(Is) - np.min(Is) ) /2
+        except ValueError:
+            Isw = np.nan
         
         order = Is.argsort()
         
