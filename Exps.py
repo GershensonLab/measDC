@@ -1,6 +1,3 @@
-%matplotlib notebook
-%load_ext autoreload
-%autoreload 2
 
 from typing import List, Tuple, Dict
 from collections.abc import Iterable 
@@ -41,8 +38,11 @@ class Exps():
         
         self.db = db
         
-        (keys, vals) = runid_table
+        (keys, valss) = runid_table
         
+        
+        
+
         self.exps = [{ key : val for key, val in zip(keys, vals)  }  for vals in valss ]
 
         self.ids = dict()
@@ -63,7 +63,7 @@ class Exps():
                         
                 if 'cos' in self.ids[idx].keys():
                     self.ids[idx]['B'] = self._get_B (idx)
-                elif 'B' in runid_dict[idx].keys():
+                elif 'B' in self.ids[idx].keys():
                     self.ids[idx]['cos'] = self._get_cos (idx)
                         
 
