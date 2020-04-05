@@ -28,56 +28,90 @@ from qcodes.dataset.plotting import plot_by_id, get_data_by_id
 import pandas as pd
 
 import pprint
+import json
+
+
 
 
 class Exps():
     
 
     
-    def __init__(self, runid_table, db):
-        
-        self.db = db
-        
-        (keys, valss) = runid_table
-        
-        
+    def __init__(self, sample, folder):
         
 
-        self.exps = [{ key : val for key, val in zip(keys, vals)  }  for vals in valss ]
+    
+        #keys ids Bs coss T comm  
+        self.keys = ['ids', 'B', 'cos', 'T', 'comm']
+        
+        self.sample = sample
+        self.folder = folder
+        
+        self.exp_connect()
 
         self.ids = dict()
-        for exp in self.exps:
+        
+                    
+
+        
+    # self.tabe = { 'id' : {  'B' : Bval , },  }    
+    def load_old(self, list_of_exp_dict):
+        
+        
+        table =  dict()
+        
+        for exp in list_of_exp_dict:
+                
             for j, idx in enumerate(exp['ids']):
-
-
-                self.ids[idx]= dict()
+                
+                
+                id_param = dict()
+         
                 for key, val in exp.items():
 
                     if isinstance(val, Iterable) and not isinstance(val, str):
 
-                        self.ids[idx][key] =  val[j] 
+                        id_param[key] =  val[j] 
 
                     else:
 
-                        self.ids[idx][key] =  val
+                        id_param[key] =  val
                         
-                if 'cos' in self.ids[idx].keys():
-                    self.ids[idx]['B'] = self._get_B (idx)
-                elif 'B' in self.ids[idx].keys():
-                    self.ids[idx]['cos'] = self._get_cos (idx)
-                        
-
-    def db_connect(self):
-
-        path = self.db
-        qc.config["core"]["db_location"] = path
+#                 if 'cos' in exp.keys():
+#                     new_line_exp['B'] = self._get_B (idx)
+#                 elif 'B' in exp.keys():
+#                     new_line_exp['cos'] = self._get_cos (idx)
+                    
+                table[idx] = id_param
+                    
+        path = self.folder + '\exps_table{}.json'.format(self.sample)            
         
+        self.table= table
+        
+        with open(path, "w") as write_file:
+
+            json.dump(table, write_file)
+                        
+
+    def exp_connect(self):
+
+        path = self.folder + '\exps_table_{}.json'.format(self.sample) 
+#         path = 'file.json'
+        try:
+            with open(path, "r") as read_file:
+                data = json.load( read_file)
+        except FileNotFoundError:
+            with open(path, "w") as write_file:
+                data = {0 : ''}
+                json.dump(data, write_file)
+        
+        self.table = data
         
     def _get_cos(self, idx):
         
         exp = self.ids[idx]
         cos = np.cos(np.pi*(exp['B'] - exp['ZF'] )/2/ (exp['FF'] - exp['ZF']))
-        return  np.round(abs( cos ), decimals = 2)
+        return  abs( cos )#np.round(abs( cos ), decimals = 4)
 
     
     def _get_B(self, idx):
@@ -85,31 +119,26 @@ class Exps():
         exp = self.ids[idx]
         B = 2*(exp['FF'] - exp['ZF'])*np.arccos(exp['cos'])/np.pi + exp['ZF']
 
-        return  np.round(abs(B), decimals = 2)
+        return  abs(B)#np.round(abs(B), decimals = 4)
 
     def show_all(self):
-
-
-        idx = self.exps[0]['ids'][0]
-        keys = self.ids[idx].keys()
-        l=''
-        for key in keys:
-            l +=  ' '+ str(key)+'\t'
-        print(l + '\n')
-            
+        
+        self.exps_topd = list()
         for exp in self.exps:
-            l = ''
-            id0 = exp['ids'][0]
-            id1 = exp['ids'][-1]
-
-            for key in keys:
-                
-                if self.ids[id0][key] == self.ids[id1][key]:
-                    
-                    l +=  ' '+ eng_string(self.ids[id0][key])+'\t'
+            
+            exp_topd = dict()
+            for key, val in exp.items():
+                if isinstance(val, Iterable) and not isinstance(val, str):
+                    exp_topd[key] = '{}..{}'.format(eng_string(val[0]), eng_string(val[-1])  )
                 else:
-                    l +=  ' '+ eng_string(self.ids[id0][key])+'-'+eng_string(self.ids[id1][key])+'\t'
-            print (l)   
+                    exp_topd[key] = '{}'.format(eng_string(val) )
+                    
+            self.exps_topd.append(exp_topd)
+                
+        df = pd.DataFrame(self.exps_topd)
+#         print(df)
+        return df
+  
             
 
 
@@ -122,15 +151,17 @@ class Exps():
             else:
                 return np.isclose(a, b, atol = atol)
 
-        cond_ids = set(idx for idx in self.ids.keys() if isclose_float_or_str(value, self.ids[idx][param]) )
+        cond_ids = set(idx for idx in self.table.keys() if isclose_float_or_str(value, self.table[idx][param]) )
 
 
         if len(cond_ids) == 0:   # if there's no exact matching - find closest
-            all_vals = np.array([ exp[param] for exp in self.ids.values() ] )
-            atol = abs( min( all_vals - value ) )
+            
+            
+            all_vals = np.array([ exp[param] for exp in self.table.values() ] )
 
-            cond_ids = set(idx for idx in self.ids.keys() 
-                           if isclose_float_or_str(self.ids[idx][param], value, atol = atol) )
+            atol = min( abs( all_vals - value ) )
+            cond_ids = set(idx for idx in self.table.keys() 
+                           if isclose_float_or_str(self.table[idx][param], value, atol = atol) )
         
         return cond_ids
     
@@ -147,7 +178,7 @@ class Exps():
             return vals
         
         
-        self.db_connect()
+#         self.db_connect()
             
         list_cond_ids = []
 
@@ -171,9 +202,9 @@ class Exps():
     
     def _make_label(self, idx, which):
         lab = ''
-        for key in which.keys():
+        for key in which:
             
-            val = self.ids[idx][key]
+            val = self.table[idx][key]
             if not isinstance(val, str):
                 val = eng_string(val)
 #                 val = '{:.2e}'.format(val)
@@ -183,16 +214,20 @@ class Exps():
     
         
     
-    def plot(self, which, ax = None, N = None,  **kw ):
+    def plot(self, which, ax = None, N = None,label_for = None,  **kw ):
         
         if  ax is None:
             fig, ax = plt.subplots()
             
         ids = self.find(which)
         
-        for idx in ids:
+        for idx in sorted(ids):
             
-            lab = self._make_label(idx, which)
+            if label_for is None:
+                lab = self._make_label(idx, which.keys())
+            else:
+                lab = self._make_label(idx, label_for)
+            
             
             if N is None:
 
@@ -215,7 +250,22 @@ class Exps():
         
         
     
-    def get_param( self, param, which  ):
-        pass
+    def get_param( self, param, which, **kw  ):
+        
+        func_dict = {'R0' : get_R0}
+        
+        ids = self.find(which)
+        results = []
+        for idx in ids:
+            
+            x,y = self.get_Is(idx)
+            results.append(  func_dict[param] (x,y, **kw) ) 
+        
+        return np.array(results)
+        
+        
+        
+        
+#     def get_R0(self, idx = None, which = None):
         
         
