@@ -7,6 +7,7 @@ Created on Mon Sep 10 10:28:59 2018
 
 import numpy as np
 import os
+from collections.abc import Iterable
 
 from JJformulas import *
 
@@ -23,18 +24,7 @@ def xy_by_id(idx):
     
     return x,y
 
-
-def extract_Isw_R0_by_id (idx):
-    
-    Is,Vs = xy_by_id(idx)
-
-        
-    return extract_Isw_R0 (Is,Vs)
-
-
-
-        
-        
+       
         
 def avg_group(vA0, vB0):
     vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
@@ -223,41 +213,79 @@ def load_exp_B(file, ZF, FF, VERBOSE = False):
 
 
 
-def extract_Isw_R0 (Is,Vs):
+def get_Isw_R0 (Is,Vs, VERBOSE = False):
     
         if len( Is )== 0 or len( Vs )== 0 :
             Isw, R0 = np.nan, np.nan
             return Isw, R0
 
         try:
-            Isw = np.max(Is)  
+            Isw = (np.max(Is) - np.min(Is))/2  
         except ValueError:
             Isw = np.nan
         
         order = Is.argsort()
         
         Is, Vs = Is[order], Vs[order]
-        
-#         n = len(Is)
-#         n_min, n_max = np.int(n/3), np.int(2*n/3)
-#         n_sl = slice(n_min, n_max)
 
-        n_sl = np.where( (Is > 0)  ) and np.where (Is < 300e-12)
-#         n_sl = np.where( abs(Is) < 200e-12 ) 
+        n_sl =  np.where (Is < 300e-12)
         
         if len( Vs[n_sl] )== 0 :
             R0 = np.nan
             return Isw, R0
         
-#         R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
-        R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
+        R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
         
         if R0 < 0:
             R0 = np.nan
-#         R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))
+            
+            
+            
+        if VERBOSE:
+            fig, ax = plt.subplots()
+            
+            ax.plot(Is, Vs, marker = 'o', ls = 'None')
+            
+            ax.plot(Is, R0*Is+b)
+            
+            
         
         return Isw, R0
 
+
+def get_Isw_R0_by_id (idx, dx = 10e-9, dy = 50e-6, Voff = 0, VERBOSE = False):
+    
+    Isws, R0s = [], []
+    
+    
+    if not isinstance(idx, Iterable):
+        SINGLE_VAL = True
+        idx = [idx]
+    else:
+        SINGLE_VAL = False
+        
+    for id_ in idx:
+        
+        I,V = xy_by_id(id_)
+
+        V -= Voff
+
+        Is,Vs = cut_dxdy(I, V, dx,dy)
+
+
+        Isw, R0 = get_Isw_R0 (Is,Vs, VERBOSE = VERBOSE )
+    
+        Isws.append(Isw)
+        R0s.append(R0)
+        
+    if SINGLE_VAL:
+        return Isws[0], R0s[0]
+    else:
+        return np.array(Isws), np.array(R0s) 
+    
+    
+    
+    
 def load_by_key(exp, key, val):
         
     ind =   np.argmin ( np.abs( exp[key] - val ))
@@ -278,8 +306,6 @@ def plot_by_key(exp, key, val, ax = None,**kw):
     ax.legend()   
     
     return I, V
-    
-    
     
     
     
@@ -338,10 +364,6 @@ def plot_IVC(ax, IVC, cut = False, plotRd = False):
         
 
 
-# def fit_to_IZ(IVC, )
-
-
-
 
 
 
@@ -352,17 +374,6 @@ def V_func(I,V, val):
     return out
 
 
-# def diffArr(Xarr, Yarr, step):
-#     out = []
-#     for x in Xarr:
-#         out = np.append(out, np.mean((V_func(Xarr,Yarr, x+step/2))  - np.mean(V_func(Xarr,Yarr, x-step/2)))/(step))
-#     return out
-
-
-# def Rdiff_TVReg(V, Istep):
-#     stepx = 0.05
-#     Rdiff = (TVRegDiff(V, 100, 10e-3, dx = stepx, ep=1e-1, scale='small', plotflag=0)*stepx / Istep)[:-1]
-#     return Rdiff
 
 
 def XYEqSp(Xarr, Yarr, step):
@@ -384,35 +395,6 @@ def XYEqSp(Xarr, Yarr, step):
 
 
 
-# def IqpRemove(X,Y, offX, offY):
-    
-#     return X - offX, Y - offY 
-
-
-
-
-# def offsetRemove(I,V, Istep, mode = 'ZF', Ioff_def = 8e-12):
-       
-#     Rdiff = Rdiff_TVReg(V, Istep)
-    
-#     ind_minR = np.argmin(Rdiff)
-#     ind_maxR = np.argmax(Rdiff)
-
-
-#     if mode == 'ZF':
-#         Ioff = I[ind_minR]
-#     else:
-#         Ioff = Ioff_def
-  
-#     Voff = V_func(I, V, Ioff)
-
-#     Inew = I - Ioff
-#     Vnew = V - Voff
-   
-
-#     return Inew, Vnew
-
-
 def IVC_symmer(I,V):
     
     I_off = ( np.max(I) + np.min(I) )/2
@@ -420,10 +402,6 @@ def IVC_symmer(I,V):
     V_off = 0
     return I - I_off, V - V_off 
 
-# def Rdiff_TVReg(V, Istep):
-#     stepx = 0.05
-#     Rdiff = (TVRegDiff(V, 100, 10e-3, dx = stepx, ep=1e-1, scale='small', plotflag=0)*stepx / Istep)[:-1]
-#     return Rdiff
 
 
 
