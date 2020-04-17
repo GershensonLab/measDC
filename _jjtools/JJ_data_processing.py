@@ -24,17 +24,48 @@ def xy_by_id(idx):
     
     return x,y
 
-       
-        
-def avg_group(vA0, vB0):
-    vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
-    vB0 = np.round(vB0*1e15)/1e15
+def pbi(idx, **kwargs):
     
-    vA, ind, counts = np.unique(vA0, return_index=True, return_counts=True) # get unique values in vA0
-    vB = vB0[ind]
-    for dup in vB[counts>1]: # store the average (one may change as wished) of original elements in vA0 reference by the unique elements in vB
-        vB[np.where(vA==dup)] = np.average(vB0[np.where(vA0==dup)])
-    return vA, vB
+    if 'marker'  not in kwargs.keys():
+        kwargs['marker'] = 'o'
+        
+    if 'ls' not in kwargs.keys():
+        kwargs['ls'] = 'None'
+        
+    axes, _ = plot_by_id(idx, **kwargs)
+    
+    return axes[0]
+
+
+def batch_plot_by_id(ids, ax = None, labels = None, **kw):
+    if ax is None:
+        fig, ax = plt.subplots()
+        
+    for i, idx in enumerate(ids):
+        if labels is not None:
+            label = labels[i]
+        else:
+            label = ''
+            
+        plot_by_id(idx, axes = ax, label = label, **kw)
+        
+    ax.legend()
+    return ax
+
+bpbi = batch_plot_by_id
+
+
+
+
+# def avg_group(vA0, vB0):
+#     vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
+#     vB0 = np.round(vB0*1e15)/1e15
+    
+#     vA, ind, counts = np.unique(vA0, return_index=True, return_counts=True) # get unique values in vA0
+#     vB = vB0[ind]
+#     for dup in vB[counts>1]: # store the average (one may change as wished) of original elements in vA0 reference by the unique elements in vB
+#         vB[np.where(vA==dup)] = np.average(vB0[np.where(vA0==dup)])
+#     return vA, vB
 
 
 def cut_dxdy(vA0, vB0, dx,dy):
