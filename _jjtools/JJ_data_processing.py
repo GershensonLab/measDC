@@ -7,7 +7,7 @@ Created on Mon Sep 10 10:28:59 2018
 
 import numpy as np
 import os
-from tvregdiff import *
+
 from JJformulas import *
 
 
