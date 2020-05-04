@@ -7,14 +7,15 @@ Created on Mon Sep 10 10:28:59 2018
 
 import numpy as np
 import os
-from collections.abc import Iterable
-
+from tvregdiff import *
 from JJformulas import *
 
 
 import qcodes as qc
 from qcodes.dataset.database import initialise_database
 from qcodes.dataset.plotting import plot_by_id, get_data_by_id
+from scipy.interpolate import UnivariateSpline
+
 
 def xy_by_id(idx):
     alldata = get_data_by_id(idx)
@@ -24,48 +25,28 @@ def xy_by_id(idx):
     
     return x,y
 
-def pbi(idx, **kwargs):
+
+def extract_Isw_R0_by_id (idx):
     
-    if 'marker'  not in kwargs.keys():
-        kwargs['marker'] = 'o'
+    Is,Vs = xy_by_id(idx)
+
         
-    if 'ls' not in kwargs.keys():
-        kwargs['ls'] = 'None'
+    return extract_Isw_R0 (Is,Vs)
+
+
+
         
-    axes, _ = plot_by_id(idx, **kwargs)
+        
+        
+def avg_group(vA0, vB0):
+    vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
+    vB0 = np.round(vB0*1e15)/1e15
     
-    return axes[0]
-
-
-def batch_plot_by_id(ids, ax = None, labels = None, **kw):
-    if ax is None:
-        fig, ax = plt.subplots()
-        
-    for i, idx in enumerate(ids):
-        if labels is not None:
-            label = labels[i]
-        else:
-            label = ''
-            
-        plot_by_id(idx, axes = ax, label = label, **kw)
-        
-    ax.legend()
-    return ax
-
-bpbi = batch_plot_by_id
-
-
-
-
-# def avg_group(vA0, vB0):
-#     vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
-#     vB0 = np.round(vB0*1e15)/1e15
-    
-#     vA, ind, counts = np.unique(vA0, return_index=True, return_counts=True) # get unique values in vA0
-#     vB = vB0[ind]
-#     for dup in vB[counts>1]: # store the average (one may change as wished) of original elements in vA0 reference by the unique elements in vB
-#         vB[np.where(vA==dup)] = np.average(vB0[np.where(vA0==dup)])
-#     return vA, vB
+    vA, ind, counts = np.unique(vA0, return_index=True, return_counts=True) # get unique values in vA0
+    vB = vB0[ind]
+    for dup in vB[counts>1]: # store the average (one may change as wished) of original elements in vA0 reference by the unique elements in vB
+        vB[np.where(vA==dup)] = np.average(vB0[np.where(vA0==dup)])
+    return vA, vB
 
 
 def cut_dxdy(vA0, vB0, dx,dy):
@@ -85,6 +66,10 @@ def offsetRemove(X,Y, offX, offY):
 
 
 def eng_string( x, sig_figs=3, si=True):
+    
+    if isinstance(x, str) or x != x:
+        return x
+    
     x = float(x)
     sign = ''
     if x < 0:
@@ -94,6 +79,10 @@ def eng_string( x, sig_figs=3, si=True):
         exp = 0
         exp3 = 0
         x3 = 0
+    elif abs (x) < 1 and abs (x) > 1e-3  :
+        exp = 0
+        exp3 = 0
+        x3 = x
     else:
         exp = int(math.floor(math.log10( x )))
         exp3 = exp - ( exp % 3)
@@ -244,79 +233,38 @@ def load_exp_B(file, ZF, FF, VERBOSE = False):
 
 
 
-def get_Isw_R0 (Is,Vs, VERBOSE = False):
+def extract_Isw_R0 (Is,Vs):
     
         if len( Is )== 0 or len( Vs )== 0 :
             Isw, R0 = np.nan, np.nan
             return Isw, R0
-
-        try:
-            Isw = (np.max(Is) - np.min(Is))/2  
-        except ValueError:
-            Isw = np.nan
+        
+        Isw = np.max(Is)#(np.max(Is) - np.min(Is) ) /2
         
         order = Is.argsort()
         
         Is, Vs = Is[order], Vs[order]
+        
+#         n = len(Is)
+#         n_min, n_max = np.int(n/3), np.int(2*n/3)
+#         n_sl = slice(n_min, n_max)
 
-        n_sl =  np.where (Is < 300e-12)
+        n_sl = np.where( (Is > 0)  ) and np.where (Is < 300e-12)
+#         n_sl = np.where( abs(Is) < 200e-12 ) 
         
         if len( Vs[n_sl] )== 0 :
             R0 = np.nan
             return Isw, R0
         
-        R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
+        #R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
+        R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
         
         if R0 < 0:
             R0 = np.nan
-            
-            
-            
-        if VERBOSE:
-            fig, ax = plt.subplots()
-            
-            ax.plot(Is, Vs, marker = 'o', ls = 'None')
-            
-            ax.plot(Is, R0*Is+b)
-            
-            
+#         R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))
         
         return Isw, R0
 
-
-def get_Isw_R0_by_id (idx, dx = 10e-9, dy = 50e-6, Voff = 0, VERBOSE = False):
-    
-    Isws, R0s = [], []
-    
-    
-    if not isinstance(idx, Iterable):
-        SINGLE_VAL = True
-        idx = [idx]
-    else:
-        SINGLE_VAL = False
-        
-    for id_ in idx:
-        
-        I,V = xy_by_id(id_)
-
-        V -= Voff
-
-        Is,Vs = cut_dxdy(I, V, dx,dy)
-
-
-        Isw, R0 = get_Isw_R0 (Is,Vs, VERBOSE = VERBOSE )
-    
-        Isws.append(Isw)
-        R0s.append(R0)
-        
-    if SINGLE_VAL:
-        return Isws[0], R0s[0]
-    else:
-        return np.array(Isws), np.array(R0s) 
-    
-    
-    
-    
 def load_by_key(exp, key, val):
         
     ind =   np.argmin ( np.abs( exp[key] - val ))
@@ -341,59 +289,52 @@ def plot_by_key(exp, key, val, ax = None,**kw):
     
     
     
+# def get_Is(self, idx,  dy = 300e-6, Voff = -0.55e-3):
+
+#     I, V = xy_by_id(idx)
+#     V-= Voff
+#     I, V = cut_dxdy(I, V, dx = 50e-9 ,dy = dy)
+
+#     return I,V+Voff    
     
     
     
     
-def find_exp_R0(I, V):
     
-        dI_max = np.max (np.diff (I) )
-        I, V =  np.sort(I), np.sort(V)
-        if dI_max ==0:
-            dI_max = 1e-11
-        I, V =  XYEqSp(I, V, step = dI_max)
+def get_R0(x,y, x0 = 0, VERBOSE = False):
+    
+    if len(y) < 5:
+        return np.nan
+    
+    sort_ind = np.argsort(x)
+    x, y = x[sort_ind], y[sort_ind]
+
+    _, unique_ind = np.unique(x, return_index=True)
+    x, y = x[unique_ind], y[unique_ind]
+
+    x,y = remove_jumps(x,y)
+
+    spl = UnivariateSpline(x, y)
+    spl.set_smoothing_factor(0.5)
+    
+    diff = np.diff( spl(x) )/ np.diff( x )
+    
+    i_x0 = np.argmin( abs( x - x0) )
+    
+    R0 = diff[i_x0] 
+    
+    if VERBOSE:
+        fig, ax = plt.subplots()
         
-        R0 = np.mean (np.diff (V) )/np.mean (np.diff (I) )
-
-#         R0 = Rdiff_TVReg(V, Istep = dI_max )
-
-        return R0
-    
-    
-
-def plot_IVC(ax, IVC, cut = False, plotRd = False):
-    
-    I = IVC['I']
-    V = IVC['V']
-    B = IVC['B']
-    
-    
-
-    
-    cosφ =  np.abs( np.cos(np.pi/2*B/8.85e-4))
-    
-    IVC['cosφ'] = cosφ
-    
-    if cut:
-        I, V = cut_dxdy(I, V, dx = 5e-9 ,dy = 3.85e-5)
-        I, V = IVC_symmer(I,V)
-
-#         dI_max = np.max (np.diff (I) )
-#         I, V =  XYEqSp(I, V, step = dI_max)
+        ax.plot(x,y, 'o', ls = '')
+        ax.plot(x, spl(x))
         
-#         R0 = Rdiff_TVReg(V, Istep = dI_max )
-#         ax.plot (I, I*np.min(  np.abs(R0) ))
-    
-    ax.plot(I ,V, 'o-',  label = 'cos = {:1.2f}'.format(cosφ))
-
-    
-    
-    if plotRd:
-        Rds = Rdiff_TVReg(V, Istep = 1e-10)
         ax2 = ax.twinx()
-        ax2.plot(I, Rds)
-        
-
+        ax2.plot(x[:-1], diff, c = 'k')
+    
+    return R0
+    
+    
 
 
 
@@ -404,6 +345,35 @@ def V_func(I,V, val):
         out = np.append (out,  V[np.argmin(abs(I-x))])
     return out
 
+
+
+def remove_jumps(x,y):
+    
+    
+    if len(y) < 3:
+        return x,y
+    
+    y_out = []
+    i_off = 1
+    Voff = 0
+    for i in range(len(y) ):
+
+        steps = abs(np.diff(y))
+
+        if i > i_off and i < len(y) - 2 :
+
+            avg_diff = np.mean(steps[:i-1])
+            if steps[i-1] > 10* avg_diff:
+                Voff -= steps[i-1]
+
+
+
+        y_out.append(y[i]+Voff)
+
+
+    y = np.array(y_out)
+    x = x
+    return x,y
 
 
 
@@ -421,23 +391,6 @@ def XYEqSp(Xarr, Yarr, step):
             outY = np.append( outY, V_func(Xarr, Yarr, np.min(Xarr) + i*step)  )
 
     return outX, outY
-
-
-
-
-
-def IVC_symmer(I,V):
-    
-    I_off = ( np.max(I) + np.min(I) )/2
-    V_off = ( np.max(V) + np.min(V) )/2
-    V_off = 0
-    return I - I_off, V - V_off 
-
-
-
-
-
-
 
 
     
