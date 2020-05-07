@@ -15,7 +15,7 @@ from Exps import *
 
 class JJmeas(QCmeas):
     
-    def __init__(self, sample, tools ,  folder = r'\\JOSH-PC\OurData_OneDrive'): 
+    def __init__(self, sample, tools = [] ,  folder = r'..\_expdata'): 
         
         
         super().__init__(sample, tools ,  folder)

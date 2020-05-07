@@ -15,11 +15,13 @@ from tqdm import tqdm, tqdm_notebook
 
 class QCmeas():
     
-    def __init__(self, sample, tools ,  folder = r'\\JOSH-PC\OurData_OneDrive'): 
+    def __init__(self, sample, tools = [] ,  folder = r'..\_expdata'): 
         
         self.tools = tools
         self.sample = sample
         self.folder = folder
+        
+#         self.setup = lambda : None
         
         self.db_connect()
         
@@ -154,8 +156,40 @@ class QCmeas():
                 datasaver.add_result(*res) 
 
         return datasaver.run_id 
+    
+    
+    def mock_meas(self, y : tuple, x : tuple, x1 = None , label = 'description'):
+        
+        """
+        Add x,y data to the qcodes database.
+        
+        Args:
+            y, x: tuples with the first element being the parameter name
+                and the second element is the corresponding array of points.
+            x1  : optional, slow variable for 3d data, not emplemented
 
+        """
+        
+        if x1 is not None:
+            print ('2d writing is not emplemented yet') 
+        
+        self.setup   = lambda: None
+        self.cleanup = lambda: None
+    
+        xdev, xdat = x
+        ydev, ydat = y
+        
+        meas = self.set_meas(ydev, xdev)
+        self.name_exp( exp_type = label)
 
+        with meas.run() as datasaver:
+
+            for _x, _y in zip(xdat, ydat):
+
+                res = [( xdev, _x ), ( ydev, _y  )]
+                datasaver.add_result(*res) 
+
+        return datasaver.run_id 
 
  
         
