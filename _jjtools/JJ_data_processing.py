@@ -72,7 +72,8 @@ def show_df(df, sort = None, find = None, which = 'all'):
 
         folder = dev_name.split('N')[0]
 
-        path = "./{}/{}_logbook.ipynb".format(folder,dev_name)
+#         path = "./{}/{}_logbook.ipynb".format(folder,dev_name)
+        path = "../{}/{}_logbook.ipynb".format(folder,dev_name)
 
         return '<a target="_blank" href={}>{}</a>'.format(path,dev_name)
 
@@ -80,10 +81,12 @@ def show_df(df, sort = None, find = None, which = 'all'):
     def link_if_measd(df):
         
         which = df['status'].str.startswith('measd')
-    
+
         meas_devs = df.loc[which].index
+        
         rename_dict = { dev : make_link(dev) for dev in meas_devs }
         df = df.rename( index  = rename_dict )
+        
         return df
 
 
