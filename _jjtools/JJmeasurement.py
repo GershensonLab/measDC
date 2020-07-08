@@ -33,25 +33,27 @@ class JJmeas(QCmeas):
         
         
         
-    def meas_Voffset(self, i):
+#     def meas_Voffset(self, i):
     
-        V_off = 0
-        N = 10
+#         V_off = 0
+#         N = 10
         
         
 
-        I = self.tools['I']
-        V = self.tools['V']
+#         I = self.tools['I']
+#         V = self.tools['V']
 
-        I.set(i)
+#         I.set(i)
 
-        for j in range(N):
-            time.sleep(.5)
-            V_off += V.get()
+#         for j in range(N):
+#             time.sleep(.5)
+#             V_off += V.get()
         
-        V.Voff = V_off/N
-        return V.Voff
-    
+# #         V.Voff = V_off/N
+# #         return V.Voff
+
+#         self.Voff = V_off/N
+#         return self.Voff    
     
     def stabilize_I(self, amp):
         
@@ -76,7 +78,7 @@ class JJmeas(QCmeas):
         
         
         
-        self.meas_Voffset(Ioff)
+        V.meas_Voff()
         Voff =  V.Voff
 
         meas = self.set_meas(V, I)
@@ -162,8 +164,21 @@ class JJmeas(QCmeas):
         ZF = self.ZF
         FF = self.FF
 
-        return np.arccos(cos)*(2* (FF - ZF)/np.pi + ZF  )
+        return np.arccos(cos)*(2* (FF - ZF)/np.pi) + ZF  
     
+
+    
+    def B_to_cos(self, B):
+        
+        
+        for frust in ['ZF', 'FF']:
+              if not hasattr(self, frust):
+                     raise Exception(f'Please indicate value of {frust}!')
+        
+        ZF = self.ZF
+        FF = self.FF
+
+        return np.cos(np.pi/2 *(B - ZF)/(FF - ZF))     
     
     def Bscan(self,  B_list = None, cos_list = None):
 

@@ -160,17 +160,26 @@ def pbi(idx, **kwargs):
     return ax
 
 
-def batch_plot_by_id(ids, ax = None, labels = None, **kw):
+def batch_plot_by_id(ids, ax = None, labels = None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
+
+        
+    if 'marker'  not in kwargs.keys():
+        kwargs['marker'] = 'o'
+        
+    if 'ls' not in kwargs.keys():
+        kwargs['ls'] = 'None'
         
     for i, idx in enumerate(ids):
         if labels is not None:
             label = labels[i]
         else:
             label = ''
+
+     
             
-        plot_by_id(idx, axes = ax, label = label, **kw)
+        plot_by_id(idx, axes = ax, label = label, **kwargs)
         
     ax.legend()
     return ax
