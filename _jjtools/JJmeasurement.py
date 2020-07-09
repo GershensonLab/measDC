@@ -20,7 +20,7 @@ class JJmeas(QCmeas):
         
         super().__init__(sample, tools ,  folder)
         
-        self.exps = Exps(sample, folder)
+#         self.exps = Exps(sample, folder)
         
     
     
