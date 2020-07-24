@@ -33,27 +33,7 @@ class JJmeas(QCmeas):
         
         
         
-#     def meas_Voffset(self, i):
-    
-#         V_off = 0
-#         N = 10
-        
-        
-
-#         I = self.tools['I']
-#         V = self.tools['V']
-
-#         I.set(i)
-
-#         for j in range(N):
-#             time.sleep(.5)
-#             V_off += V.get()
-        
-# #         V.Voff = V_off/N
-# #         return V.Voff
-
-#         self.Voff = V_off/N
-#         return self.Voff    
+ 
     
     def stabilize_I(self, amp):
         
@@ -100,6 +80,7 @@ class JJmeas(QCmeas):
                 time.sleep(dt)
 
                 is_vs = [[I.get(),V.get()] for _ in range( N_avg)]
+                
                 ir, v = np.mean(is_vs, axis = 0)
 
                 
