@@ -162,7 +162,6 @@ class Exps():
             atol = min( abs( all_vals - value ) )
             cond_ids = set(idx for idx in self.table.keys() 
                            if isclose_float_or_str(self.table[idx][param], value, atol = atol) )
-        
         return cond_ids
     
     
@@ -214,7 +213,6 @@ class Exps():
     
         
     
-    def plot(self, which, ax = None, N = None,label_for = None,  **kw ):
         
         if  ax is None:
             fig, ax = plt.subplots()
