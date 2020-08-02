@@ -160,17 +160,26 @@ def pbi(idx, **kwargs):
     return ax
 
 
-def batch_plot_by_id(ids, ax = None, labels = None, **kw):
+def batch_plot_by_id(ids, ax = None, labels = None, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
+
+        
+    if 'marker'  not in kwargs.keys():
+        kwargs['marker'] = 'o'
+        
+    if 'ls' not in kwargs.keys():
+        kwargs['ls'] = 'None'
         
     for i, idx in enumerate(ids):
         if labels is not None:
             label = labels[i]
         else:
             label = ''
+
+     
             
-        plot_by_id(idx, axes = ax, label = label, **kw)
+        plot_by_id(idx, axes = ax, label = label, **kwargs)
         
     ax.legend()
     return ax
@@ -245,11 +254,14 @@ def xy_by_id(idx):
     return x,y
 
 
-def extract_Isw_R0_by_id (idx):
+def extract_Isw_R0_by_id (idx, dy = 50e-6, yoff = 0):
+    
     
     Is,Vs = xy_by_id(idx)
+    
+    Is -= yoff
 
-        
+    Is,Vs = cut_dxdy(Is, Vs, dx = 250e-9 ,dy = dy)    
     return extract_Isw_R0 (Is,Vs)
 
 
@@ -463,7 +475,9 @@ def extract_Isw_R0 (Is,Vs):
             Isw, R0 = np.nan, np.nan
             return Isw, R0
         
-        Isw = np.max(Is)#(np.max(Is) - np.min(Is) ) /2
+        
+        
+        Isw = ( np.max(Is) - np.min(Is) ) /2
         
         order = Is.argsort()
         

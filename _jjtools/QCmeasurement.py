@@ -13,6 +13,8 @@ from si_prefix import si_format as SI
 
 from tqdm import tqdm, tqdm_notebook
 
+from  JJ_data_processing import pbi, bpbi
+
 class QCmeas():
     
     def __init__(self, sample, tools = [] ,  folder = r'..\_expdata'): 
@@ -32,7 +34,19 @@ class QCmeas():
         folder = self.folder 
         qc.config["core"]["db_location"] = folder +'\Experiments_{}.db'.format(sample)
             
-            
+    def pbi(self, idx, **kwargs):
+        
+        self.db_connect()
+        ax = pbi( idx, **kwargs)
+        
+        return ax
+    
+    def bpbi(self, ids, **kwargs):
+        
+        self.db_connect()
+        ax = bpbi( ids, **kwargs)
+        
+        return ax
 
     def set_meas(self, dep, fast_indep, slow_indep = None):
         """

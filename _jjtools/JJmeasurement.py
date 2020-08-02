@@ -20,7 +20,7 @@ class JJmeas(QCmeas):
         
         super().__init__(sample, tools ,  folder)
         
-        self.exps = Exps(sample, folder)
+#         self.exps = Exps(sample, folder)
         
     
     
@@ -33,25 +33,7 @@ class JJmeas(QCmeas):
         
         
         
-    def meas_Voffset(self, i):
-    
-        V_off = 0
-        N = 10
-        
-        
-
-        I = self.tools['I']
-        V = self.tools['V']
-
-        I.set(i)
-
-        for j in range(N):
-    #         time.sleep(.1)
-            V_off += V.get()
-        
-        V.Voff = V_off/N
-        return V.Voff
-    
+ 
     
     def stabilize_I(self, amp):
         
@@ -59,24 +41,24 @@ class JJmeas(QCmeas):
         I = self.tools['I']
             
         x = np.arange(100)
-        i_s = amp*np.exp(- x/20 )* np.sin(x/3)
+        i_s = amp*np.exp(- x/20 )* np.cos(x/3)
         
         for i in i_s:
             I.set(i)
             time.sleep(0.1)
 
+
     
-    def IVC_cust (self, i_list, Ioff = 0, dt = 0.1, N_avg = 1, label = ''):
+            
+            
+    def IVC_cust (self, i_list, Ioff = 0, Vthr = 1, dt = 0.1, N_avg = 1, label = ''):
 
         I = self.tools['I']
         V = self.tools['V']
         
         
-#         ampl = max(i_list) - min(i_list)
-#         self.stabilize_I( ampl )
         
-        self.meas_Voffset(Ioff)
-#         V.Voff = 0
+        V.meas_Voff()
         Voff =  V.Voff
 
         meas = self.set_meas(V, I)
@@ -98,14 +80,28 @@ class JJmeas(QCmeas):
                 time.sleep(dt)
 
                 is_vs = [[I.get(),V.get()] for _ in range( N_avg)]
+                
                 ir, v = np.mean(is_vs, axis = 0)
 
+                
+                
+                    
                 res = [( I, ir - Ioff  ), ( V, v - Voff  )]
+                
+
                 
                 ti_list.set_description('I = {}A'.format( SI(ir) ))
                 
-                datasaver.add_result(*res) 
+                if abs( v - Voff) > Vthr:
+                    datasaver.add_result(( I, np.nan  ), ( V, np.nan  ))
+                    break
                 
+                datasaver.add_result(*res)
+                
+                
+        
+        self.stabilize_I(amp = i)
+        
         run_id = datasaver.run_id
         
         self.last_runid = run_id
@@ -149,8 +145,21 @@ class JJmeas(QCmeas):
         ZF = self.ZF
         FF = self.FF
 
-        return np.arccos(cos)*(2* (FF - ZF)/np.pi + ZF  )
+        return np.arccos(cos)*(2* (FF - ZF)/np.pi) + ZF  
     
+
+    
+    def B_to_cos(self, B):
+        
+        
+        for frust in ['ZF', 'FF']:
+              if not hasattr(self, frust):
+                     raise Exception(f'Please indicate value of {frust}!')
+        
+        ZF = self.ZF
+        FF = self.FF
+
+        return np.cos(np.pi/2 *(B - ZF)/(FF - ZF))     
     
     def Bscan(self,  B_list = None, cos_list = None):
 
@@ -188,12 +197,12 @@ class JJmeas(QCmeas):
         
         
         B.set(0)    
-        print("{" + 
-            " 'ids' : range({},{}+1),".format(runids[0], runids[-1]) +
-            " 'B' : np.linspace({:1.2e},{:1.2e}, {}),".format(B_list[0], B_list[-1], len(B_list)) +
-            " 'T' : {:1.3f},".format(np.round(T.get()*200)/200) + 
-            " 'comm : '' }"
-             )
+#         print("{" + 
+#             " 'ids' : range({},{}+1),".format(runids[0], runids[-1]) +
+#             " 'B' : np.linspace({:1.2e},{:1.2e}, {}),".format(B_list[0], B_list[-1], len(B_list)) +
+#             " 'T' : {:1.3f},".format(np.round(T.get()*200)/200) + 
+#             " 'comm : '' }"
+#              )
 
             
             
