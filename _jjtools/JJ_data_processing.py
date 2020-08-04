@@ -72,8 +72,8 @@ def show_df(df, sort = None, find = None, which = 'all'):
 
         folder = dev_name.split('N')[0]
 
-#         path = "./{}/{}_logbook.ipynb".format(folder,dev_name)
-        path = "../{}/{}_logbook.ipynb".format(folder,dev_name)
+        path = "./{}/{}_logbook.ipynb".format(folder,dev_name)
+#         path = "../{}/{}_logbook.ipynb".format(folder,dev_name)
 
         return '<a target="_blank" href={}>{}</a>'.format(path,dev_name)
 

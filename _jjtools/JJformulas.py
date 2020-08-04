@@ -49,6 +49,8 @@ def Qp(EJ, Ec, Rsh):
 def Ic (R, Δ = 2.1*kB):
     return pi*Δ/2/e/R
 
+def Ic_AB (Ej):
+    return Ej/(Φ0/2/pi/kB)
 
 
 def EJ_AB (R, Δ = 2.1*kB):
