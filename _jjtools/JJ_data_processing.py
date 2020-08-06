@@ -66,14 +66,14 @@ def calc_jj_param(df, params = None):
 
 
     
-def show_df(df, sort = None, find = None, which = 'all'):
+def show_df(df, sort = None, find = None, which = 'all', status = 'all'):
 
     def make_link(dev_name):
 
         folder = dev_name.split('N')[0]
 
         
-        for root, dirs, _ in os.walk('../..'): #goes 2 dir up and walk down until meet the chain folder
+        for root, dirs, _ in os.walk('..'): #goes 2 dir up and walk down until meet the chain folder
             if '!_chains'  in dirs:
                 path = root + "/!_chains/{}/{}_logbook.ipynb".format(folder,dev_name)  
 
@@ -91,9 +91,14 @@ def show_df(df, sort = None, find = None, which = 'all'):
         
         return df
 
-
+    measd = df['status'].str.startswith('measd')
     
     cdf = df.copy()
+    
+    if status is 'measd':
+        cdf = cdf[measd]
+    elif status is 'fab':
+        cdf = cdf[not measd]
     
     cdf = cdf.sort_index(axis = 0)
     
