@@ -106,11 +106,6 @@ class JJmeas(QCmeas):
         
         self.last_runid = run_id
         
-#         if self.isexp:
-            
-#             self.exps[datasaver.run_id] = self.make_exp_line()
-#             self.isexp = False
-
         return run_id 
     
     
@@ -135,6 +130,62 @@ class JJmeas(QCmeas):
 
         return run_id 
 
+
+    def meas_hist(self, N, i_list, dt = 0, Vthr = 30e-6, label =''):
+        
+        I = self.tools['I']
+        V = self.tools['V']
+        
+        V.meas_Voff()
+        Voff =  V.Voff
+
+        Isw = Parameter(name = 'Swithching current', label = 'Swithching current',
+                        unit = 'A')
+
+        t = Parameter(name = 'Time', label = 'Time',
+                      unit = 's')
+        
+        meas = self.set_meas(Isw, t)
+        
+        if label == '':
+            label = 'hist ' + self.make_label()
+
+        self.name_exp( exp_type = label )
+        
+        to = time.time()
+        
+        ti_list = tqdm_notebook(i_list, leave = False)
+        with meas.run() as datasaver:
+            
+            V = Voff
+
+            for i in  ti_list:
+                
+                if  (V - Voff) < Vthr:
+                    break
+                
+                time.sleep(dt)
+                I.set(i)
+                ti_list.set_description('I = {}A'.format( SI(i) ))
+                
+                V = V.get() 
+                
+                
+            res = [( Isw, i  ), ( t, time.time() - t0  )]
+                
+            
+                
+                
+            datasaver.add_result(*res)
+            
+        
+        run_id = datasaver.run_id
+               
+        return run_id 
+    
+    
+    
+    
     def cos_to_B(self, cos):
         
         
@@ -239,6 +290,8 @@ class JJmeas(QCmeas):
             tT_list.set_description('T = {}K'.format( SI(t) ))
 
             yield self
+            
+
 
             
         

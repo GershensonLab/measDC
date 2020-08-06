@@ -494,8 +494,8 @@ def extract_Isw_R0 (Is,Vs):
             R0 = np.nan
             return Isw, R0
         
-        #R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
-        R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
+        R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
+#         R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
         
         if R0 < 0:
             R0 = np.nan
