@@ -1,0 +1,4 @@
+
+*.pyc
+!_chains/.ipynb_checkpoints/Q1D chain result table-checkpoint.ipynb
+*.pyc
