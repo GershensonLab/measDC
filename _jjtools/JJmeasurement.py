@@ -11,6 +11,8 @@ from QCmeasurement import *
 from meas_util import *
 from tqdm import tqdm, tqdm_notebook
 
+from collections.abc import Iterable 
+
 from Exps import *
 
 class JJmeas(QCmeas):
@@ -60,6 +62,8 @@ class JJmeas(QCmeas):
         
         V.meas_Voff()
         Voff =  V.Voff
+        
+        self.stabilize_I(amp = np.max(i_list))
 
         meas = self.set_meas(V, I)
 
@@ -211,6 +215,46 @@ class JJmeas(QCmeas):
         FF = self.FF
 
         return np.cos(np.pi/2 *(B - ZF)/(FF - ZF))     
+
+    
+    def Bscan_f(self, f, B_list = None):
+        
+        
+        B = self.tools['B']
+        idx = Parameter(name = 'runid', label = '#')
+        
+        meas = self.set_meas(idx, B)
+        
+        if label == '':
+            label = 'Bscan ids list ' + self.make_label()
+
+        self.name_exp( exp_type = label )
+        
+        
+        tB_list = tqdm_notebook(B_list)
+        
+        with meas.run() as datasaver:
+
+            for b in tB_list:
+
+                B.set(b)
+                tB_list.set_description('B = {}A'.format( SI(b) ))
+
+                f
+
+                yield self
+                
+                res = [( runid, idx  ), ( B, b  )]
+                
+                datasaver.add_result(*res)
+
+            
+            
+            
+            
+            
+            
+    
     
     def Bscan(self,  B_list = None, cos_list = None):
 
@@ -248,16 +292,33 @@ class JJmeas(QCmeas):
         
         
         B.set(0)    
-#         print("{" + 
-#             " 'ids' : range({},{}+1),".format(runids[0], runids[-1]) +
-#             " 'B' : np.linspace({:1.2e},{:1.2e}, {}),".format(B_list[0], B_list[-1], len(B_list)) +
-#             " 'T' : {:1.3f},".format(np.round(T.get()*200)/200) + 
-#             " 'comm : '' }"
-#              )
+
+        
 
             
             
-            
+    def Isw_by_id(self, ids, fullIVC = True, **kwargs):
+        
+        
+        self.db_connect()
+        
+        if fullIVC:
+            k = 1
+        else:
+            k = 2
+        
+        if not isinstance(ids, Iterable):
+            ids = [ids]
+
+        
+        Ics = np.array([k*extract_Isw_R0_by_id (idx, **kwargs)[0] for idx in ids])
+
+        if len(Ics) == 1:
+            Ics = Ics[0]
+        
+        return Ics
+    
+    
             
     def Tscan(self,  T_list):        
         

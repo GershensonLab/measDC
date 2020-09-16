@@ -191,12 +191,14 @@ def connect_interactive(ax):
     global x_clk, y_clk, fitline , text
 
 
-    def find_nearest(val, ax):
+    def find_nearest(xval, yval, ax):
 
         linex = ax.lines[-1].get_xdata()    
         liney = ax.lines[-1].get_ydata()
 
-        ind = np.argmin (abs( linex - val) )
+        ind = np.argmin ( (liney - yval)**2 + (linex - xval)**2 )
+        
+        print(ind)
 
         x = linex[ind]
         y = liney[ind]
@@ -214,12 +216,12 @@ def connect_interactive(ax):
         except NameError:
             fitline = None
 
-        x_clk, y_clk = find_nearest( event.xdata, ax )
+        x_clk, y_clk = find_nearest( event.xdata, event.ydata, ax )
 
     def offclick(event):
         global deltaX, deltaY, fitline, text
 
-        x_offclk, y_offclk = find_nearest( event.xdata, ax )
+        x_offclk, y_offclk = find_nearest(  event.xdata, event.ydata, ax )
 
         deltaX = x_offclk -  x_clk
         deltaY = y_offclk -  y_clk
@@ -259,7 +261,7 @@ def extract_Isw_R0_by_id (idx, dy = 50e-6, yoff = 0):
     
     Is,Vs = xy_by_id(idx)
     
-    Is -= yoff
+    Vs -= yoff
 
     Is,Vs = cut_dxdy(Is, Vs, dx = 250e-9 ,dy = dy)    
     return extract_Isw_R0 (Is,Vs)
@@ -267,17 +269,6 @@ def extract_Isw_R0_by_id (idx, dy = 50e-6, yoff = 0):
 
 
         
-        
-        
-def avg_group(vA0, vB0):
-    vA0 = np.round(vA0*1e15)/1e15   #remove small deferences
-    vB0 = np.round(vB0*1e15)/1e15
-    
-    vA, ind, counts = np.unique(vA0, return_index=True, return_counts=True) # get unique values in vA0
-    vB = vB0[ind]
-    for dup in vB[counts>1]: # store the average (one may change as wished) of original elements in vA0 reference by the unique elements in vB
-        vB[np.where(vA==dup)] = np.average(vB0[np.where(vA0==dup)])
-    return vA, vB
 
 
 def cut_dxdy(vA0, vB0, dx,dy):
@@ -338,141 +329,14 @@ def eng_string( x, sig_figs=3, si=True):
 
 
 
-def load_IVC_B(file):
-
-    IVC = []
-    
-    data = np.genfromtxt(file, skip_header = 22 ) [1:,:] 
-    Ts    = data[:,5]
-    Iraw = data[:,7]
-    Vraw = data[:,8]
-    IG   = data[:,6]
-
-    
-
-    index_sets = [np.argwhere(i == IG) for i in np.unique(IG)]
-
-    Iss = []
-    Igs = []
-
-    for sll in index_sets:
-        sl = sll.flatten()
-
-#         I, V = avg_group(Iraw[sl], Vraw[sl])
-        I, V = Iraw[sl], Vraw[sl]
-        
-        T = np.mean(Ts[sl])
-        B = np.mean(IG[sl])
-        
-        IVC_i = {'I' : I, 'V' : V, 'T' : T, 'B' : B }
-        
-        IVC.append(IVC_i)
-
-    return IVC
-
-
-
-
-
-    for i in exp['ids']:
-
-        I, V = xy_by_id(i)
-        
-        Tb = exp['T']
-        I, V = offsetRemove(I,V, offX = 25.5e-12, offY = 35e-6)
-
-        
-        I, V = cut_dxdy(I, V, dx = 1e-9 ,dy = 0.1e-3)
-
-        I = I - Iqp(  V, T = Tb, G1 = 1/20.06e3, G2 = 1/120e3, V0 = 0.35e-3 ) 
-        
-        ax.plot(I,V, 'o')
-
-
-       
-
-        
-    exp ['Is' ] =  Is
-    exp ['Vs' ] =  Vs
-
-        
-
-    
-
-
-
-def load_exp_B(file, ZF, FF, VERBOSE = False):
-    
-    exp  = {}
-   
-    Isws = []
-    R0s  = []
-    Is   = []
-    Vs   = []
-    Bs   = []
-    
-    data  = np.genfromtxt(file, skip_header = 22 ) [1:,:] 
-    Ts    = data[:,5]
-    Iraw  = data[:,7]
-    Vraw  = data[:,8]
-    IG    = data[:,6]
-    
-    T = np.mean(Ts)
-
-    index_sets = [np.argwhere(i == IG) for i in np.unique(IG)]
-
-    Iss = []
-    Igs = []
-
-    for sll in index_sets:
-        sl = sll.flatten()
-
-        I, V = Iraw[sl], Vraw[sl]
-        
-        n = len(I)
-        n_up, n_down = np.int(n/4), np.int(3*n/4)
-        
-        I = np.append(I[: n_up], I[ n_down:])
-        V = np.append(V[: n_up], V[ n_down:])
-    
-        I, V = cut_dxdy(I, V, dx = 5e-8 ,dy = 2e-5)
-        
-        Is.append(I)
-        Vs.append(V)
-        
-        Isw, R0 = extract_Isw_R0 (I,V)
-        Isws.append(Isw)
-        R0s.append(R0)
-        
-        Bs.append(np.mean(IG[sl]))
-        
-
-        
-    exp = {'Is' : Is, 'Vs' : Vs, 'T' : T, 'B' : np.array(Bs) }
-    
-    exp ['Isws'] =  np.array(Isws)
-    exp ['R0s' ] =  np.array(R0s )
-    exp ['cos' ] =  np.array( abs(np.cos(np.pi*(exp['B'] - ZF )/(ZF + 2* FF)) ) )
-
-        
-    if VERBOSE:
-        fig, ax = plt.subplots()
-        for i, cos in enumerate (exp ['cos' ]):
-
-            ax.plot(exp ['Is'][i],exp ['Vs'][i], 'o', label = 'cos = {:1.2f}'.format(cos))
-            
-            ax.set_title('T = {:3.0f} mK'.format(exp['T'] / 1e-3))
-#         ax.legend()
-        
-    return exp
-
-
 
 
 def extract_Isw_R0 (Is,Vs):
     
         if len( Is )== 0 or len( Vs )== 0 :
             Isw, R0 = np.nan, np.nan
+            
+            print('no points in cut range')
             return Isw, R0
         
         
@@ -494,8 +358,8 @@ def extract_Isw_R0 (Is,Vs):
             R0 = np.nan
             return Isw, R0
         
-        R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
-#         R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
+#         R0, b = np.polyfit (  Is[n_sl] , Vs[n_sl], 1 )
+        R0 = np.mean(np.diff(Vs[n_sl])) / np.mean(np.diff(Is[n_sl]))        
         
         if R0 < 0:
             R0 = np.nan
@@ -525,15 +389,6 @@ def plot_by_key(exp, key, val, ax = None,**kw):
     return I, V
     
     
-    
-    
-# def get_Is(self, idx,  dy = 300e-6, Voff = -0.55e-3):
-
-#     I, V = xy_by_id(idx)
-#     V-= Voff
-#     I, V = cut_dxdy(I, V, dx = 50e-9 ,dy = dy)
-
-#     return I,V+Voff    
     
     
     
